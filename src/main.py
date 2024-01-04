@@ -1,17 +1,32 @@
-from dotenv import dotenv_values
-import telebot
-import os
+import logging
 
+from dotenv import dotenv_values
+from telegram import Update
+from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext
+
+
+logging.basicConfig(
+    format="%(levelname)s- %(name)s - %(asctime)s - %(message)s", level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
 config = dotenv_values(".env")
 
-bot = telebot.TeleBot(config.get('BOT_TOKEN', "empty"))
+async def start(update: Update, _:ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Hello! Use /wander_to YOUR_URL to track website status.') 
 
+async def list_destinations(update: Update, _:ContextTypes.DEFAULT_TYPE):
+    pass
 
-@bot.message_handler(commands=['start', 'Hello'])
-def send_message(message):
-    bot.reply_to(message, "Hiii!!")
+def main():
+    """Attach handlers and run the bot."""
+    application = Application.builder().token(config.get('BOT_TOKEN', 'EMPTY')).build()
     
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('list_destinations', list_destinations))
+    
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-
-bot.infinity_polling()
+if __name__ == '__main__':
+    main()
 
