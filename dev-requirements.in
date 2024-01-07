@@ -1,5 +1,9 @@
 python-telegram-bot==20.7 
 python-telegram-bot[job-queue]
+git+https://github.com/python-telegram-bot/ptbcontrib.git@main
+
+pymongo==4.6.1
+
 requests
 
 flake8

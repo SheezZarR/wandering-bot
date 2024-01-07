@@ -1,4 +1,7 @@
 python-telegram-bot==20.7 
 python-telegram-bot[job-queue]
 python-dotenv
+git+https://github.com/python-telegram-bot/ptbcontrib.git@main
+
 requests
+pymongo==4.6.1
