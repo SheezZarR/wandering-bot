@@ -6,7 +6,14 @@ deps:
 lint:
 	black src
 	flake8 src
+
+compdock:
+	docker-compose build 
+	docker-compose up
+
+# To start a single tg-bot instance...
 dock:
 	docker build -t tg-bot .
 	docker rm tg-bot
 	docker run -v /home/SheezZarR/Documents/dev/python/wandering-bot/.env:/app/.env:ro --name tg-bot tg-bot
+

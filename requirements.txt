@@ -28,12 +28,16 @@ idna==3.6
     #   anyio
     #   httpx
     #   requests
+ptbcontrib @ git+https://github.com/python-telegram-bot/ptbcontrib.git@main
+    # via -r requirements.in
 pymongo==4.6.1
     # via -r requirements.in
 python-dotenv==1.0.0
     # via -r requirements.in
 python-telegram-bot[job-queue]==20.7
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   ptbcontrib
 pytz==2023.3.post1
     # via
     #   apscheduler

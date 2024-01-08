@@ -11,7 +11,5 @@ RUN pip install --no-cache-dir -r /srv/requirements.txt
 
 WORKDIR /app
 
-COPY ./src .
-
 CMD ["python3", "/app/main.py"]
 
