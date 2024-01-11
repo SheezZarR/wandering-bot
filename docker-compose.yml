@@ -13,9 +13,10 @@ services:
 
   tg-bot:
     build: .
+    command: /app/bot-run.sh
     container_name: tg-bot
     volumes:
-      - ./src:/app
+      - ./src:/app/src
       - ./.env:/app/.env
     depends_on:
       - mongo 
