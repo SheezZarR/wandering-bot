@@ -1,11 +1,14 @@
+from typing import Text, List
 import requests
 import logging
 
 from dotenv import dotenv_values
 from telegram import Update
-from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext
+from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext, Job
 
 from ptbcontrib.ptb_jobstores.mongodb import PTBMongoDBJobStore
+
+from replies import SET_TIMER_EXPLAIN, REMOVE_TIMER_EXPLAIN
 
 logging.basicConfig(
     format="%(levelname)s- %(name)s - %(asctime)s - %(message)s", level=logging.INFO
@@ -18,13 +21,7 @@ logger.info(f'Is key missing? {config.get("BOT_TOKEN") is None}')
 
 
 async def start(update: Update, _: ContextTypes.DEFAULT_TYPE):
-    await update.effective_message.reply_text(
-        "Hello! Use /set_destination YOUR_URL DELAY_SECONDS to track website status."
-    )
-
-
-async def abolish_path():
-    pass
+    await update.effective_message.reply_text(SET_TIMER_EXPLAIN)
 
 
 async def wander_to(context: CallbackContext):
@@ -64,8 +61,13 @@ async def set_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_message.chat_id
 
     try:
-        destination = context.args[0]
-        timer = float(context.args[1])
+        timer_name: Text = context.args[0]
+        destination: Text = context.args[1]
+        timer = float(context.args[2])
+
+        if not timer_name:
+            await update.effective_message.reply_text(SET_TIMER_EXPLAIN) 
+            return
 
         if timer < 0:
             await update.effective_message.reply_text("Incorrect time")
@@ -75,41 +77,53 @@ async def set_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
             wander_to,
             interval=timer,
             chat_id=chat_id,
-            name=str(chat_id),
+            name=timer_name,
             data=destination,
         )
 
         await update.effective_message.reply_text("Location was added!")
     except (IndexError, ValueError):
-        await update.effective_message.reply_text(
-            "Usage: /set_destination destination(URL) frequency(time in seconds)"
-        )
+        await update.effective_message.reply_text(SET_TIMER_EXPLAIN)
 
 
 async def remove_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Command to remove existing destination by given name."""
-    current_jobs = context.job_queue.get_jobs_by_name(
-        str(update.effective_message.chat_id)
-    )
+    timer_name = context.args[0]
+    
+    if not timer_name:
+        await update.effective_message.reply_text(REMOVE_TIMER_EXPLAIN) 
+        return
+    
+    current_jobs = context.job_queue.get_jobs_by_name(timer_name)
+
     logger.info(current_jobs)
+    
+    if not current_jobs:
+        await update.effective_message.reply_text(f'{timer_name.capitalize()} not found!')
+        return
+
     for job in current_jobs:
         job.schedule_removal()
 
-    await update.effective_message.reply_text(
-        f"Removed {len(current_jobs)} destinations"
-    )
+    await update.effective_message.reply_text(f'{timer_name} removed!')
 
 
 async def edit_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Function allows to change actively running jobs. E.g. change frequency"""
+
+    timer_name = context.args[0]
+    
+    if not timer_name:
+        await update.effective_message.reply_text()
+
     current_jobs = context.job_queue.get_jobs_by_name(
-        str(update.effective_message.chat_id)
     )
     new_destination = context.args[0]
 
     logger.info(f"New dest for jobs: {new_destination}")
     for job in current_jobs:
         job.data = new_destination
+
     logger.info(f"Updated: {len(current_jobs)}")
     await update.effective_message.reply_text(f"Updated: {len(current_jobs)}")
 
@@ -140,7 +154,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("list_destinations", list_destinations))
     application.add_handler(CommandHandler("set_destination", set_destination))
-    application.add_handler(CommandHandler("rm_destinations", remove_destination))
+    application.add_handler(CommandHandler("rm_destination", remove_destination))
     application.add_handler(CommandHandler("edit_destination", edit_destination))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
