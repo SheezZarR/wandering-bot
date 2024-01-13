@@ -1,14 +1,14 @@
-from typing import Text, List
+from typing import Text
 import requests
 import logging
 
 from dotenv import dotenv_values
 from telegram import Update
-from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext, Job
+from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext 
 
 from ptbcontrib.ptb_jobstores.mongodb import PTBMongoDBJobStore
 
-from replies import SET_TIMER_EXPLAIN, REMOVE_TIMER_EXPLAIN
+from replies import AVAILABLE_ACTIONS_EXPLAIN, EDIT_CMD, HELP_CMD, LIST_CMD, REMOVE_CMD, SET_CMD, SET_TIMER_EXPLAIN, REMOVE_TIMER_EXPLAIN, STARTUP_EXPLAIN
 
 logging.basicConfig(
     format="%(levelname)s- %(name)s - %(asctime)s - %(message)s", level=logging.INFO
@@ -21,14 +21,16 @@ logger.info(f'Is key missing? {config.get("BOT_TOKEN") is None}')
 
 
 async def start(update: Update, _: ContextTypes.DEFAULT_TYPE):
-    await update.effective_message.reply_text(SET_TIMER_EXPLAIN)
+    await update.effective_message.reply_markdown(STARTUP_EXPLAIN)
 
+async def show_help(update: Update, _: ContextTypes.DEFAULT_TYPE):
+    await update.effective_message.reply_markdown(AVAILABLE_ACTIONS_EXPLAIN)
 
 async def wander_to(context: CallbackContext):
     """Visit specified link and send a message if resource is not avaiable."""
     job = context.job
     destination = job.data
-
+    
     try:
         response = requests.get(destination)
 
@@ -73,11 +75,13 @@ async def set_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.effective_message.reply_text("Incorrect time")
             return
 
+        job_name = timer_name + '.' + str(chat_id)
+
         context.job_queue.run_repeating(
             wander_to,
             interval=timer,
             chat_id=chat_id,
-            name=timer_name,
+            name=job_name,
             data=destination,
         )
 
@@ -94,7 +98,8 @@ async def remove_destination(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.effective_message.reply_text(REMOVE_TIMER_EXPLAIN) 
         return
     
-    current_jobs = context.job_queue.get_jobs_by_name(timer_name)
+    full_job_name = timer_name + '.' + str(update.effective_message.chat_id)
+    current_jobs = context.job_queue.get_jobs_by_name(full_job_name)
 
     logger.info(current_jobs)
     
@@ -135,8 +140,11 @@ async def list_destinations(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_message = f"Existing jobs: {len(current_jobs)}\n"
 
     for ind, job in enumerate(current_jobs):
+        # Removing chat_id from the job.name
+        clean_name = job.name.split('.')[0]
+
         # Since job.date is set to destination we can print it right away!
-        reply_message += f"{ind + 1}. Name: {job.name}. {job.data}\n"
+        reply_message += f"{ind + 1}. Name: {clean_name}. {job.data}. Next run at: {job.next_t} \n"
 
     await update.effective_message.reply_text(reply_message)
 
@@ -151,11 +159,13 @@ def main():
             host=config.get('MONGO_CONNECT'),
         )
     )
+
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("list_destinations", list_destinations))
-    application.add_handler(CommandHandler("set_destination", set_destination))
-    application.add_handler(CommandHandler("rm_destination", remove_destination))
-    application.add_handler(CommandHandler("edit_destination", edit_destination))
+    application.add_handler(CommandHandler(HELP_CMD, show_help))
+    application.add_handler(CommandHandler(LIST_CMD, list_destinations))
+    application.add_handler(CommandHandler(SET_CMD, set_destination))
+    application.add_handler(CommandHandler(REMOVE_CMD, remove_destination))
+    application.add_handler(CommandHandler(EDIT_CMD, edit_destination))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
