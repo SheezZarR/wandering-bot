@@ -4,11 +4,20 @@ import logging
 
 from dotenv import dotenv_values
 from telegram import Update
-from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext 
+from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext
 
 from ptbcontrib.ptb_jobstores.mongodb import PTBMongoDBJobStore
 
-from replies import AVAILABLE_ACTIONS_EXPLAIN, EDIT_CMD, HELP_CMD, LIST_CMD, REMOVE_CMD, SET_CMD, SET_TIMER_EXPLAIN, REMOVE_TIMER_EXPLAIN, STARTUP_EXPLAIN
+from replies import (
+    AVAILABLE_ACTIONS_EXPLAIN,
+    HELP_CMD,
+    LIST_CMD,
+    REMOVE_CMD,
+    SET_CMD,
+    SET_TIMER_EXPLAIN,
+    REMOVE_TIMER_EXPLAIN,
+    STARTUP_EXPLAIN,
+)
 
 logging.basicConfig(
     format="%(levelname)s- %(name)s - %(asctime)s - %(message)s", level=logging.INFO
@@ -23,14 +32,16 @@ logger.info(f'Is key missing? {config.get("BOT_TOKEN") is None}')
 async def start(update: Update, _: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_markdown(STARTUP_EXPLAIN)
 
+
 async def show_help(update: Update, _: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_markdown(AVAILABLE_ACTIONS_EXPLAIN)
+
 
 async def wander_to(context: CallbackContext):
     """Visit specified link and send a message if resource is not avaiable."""
     job = context.job
     destination = job.data
-    
+
     try:
         response = requests.get(destination)
 
@@ -68,14 +79,14 @@ async def set_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
         timer = float(context.args[2])
 
         if not timer_name:
-            await update.effective_message.reply_text(SET_TIMER_EXPLAIN) 
+            await update.effective_message.reply_text(SET_TIMER_EXPLAIN)
             return
 
         if timer < 0:
             await update.effective_message.reply_text("Incorrect time")
             return
 
-        job_name = timer_name + '.' + str(chat_id)
+        job_name = timer_name + "." + str(chat_id)
 
         context.job_queue.run_repeating(
             wander_to,
@@ -92,45 +103,28 @@ async def set_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def remove_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Command to remove existing destination by given name."""
-    timer_name = context.args[0]
-    
-    if not timer_name:
-        await update.effective_message.reply_text(REMOVE_TIMER_EXPLAIN) 
+    try:
+        timer_name = context.args[0]
+
+    except IndexError as err:
+        await update.effective_message.reply_markdown(REMOVE_TIMER_EXPLAIN)
         return
-    
-    full_job_name = timer_name + '.' + str(update.effective_message.chat_id)
+
+    full_job_name = timer_name + "." + str(update.effective_message.chat_id)
     current_jobs = context.job_queue.get_jobs_by_name(full_job_name)
 
     logger.info(current_jobs)
-    
+
     if not current_jobs:
-        await update.effective_message.reply_text(f'{timer_name.capitalize()} not found!')
+        await update.effective_message.reply_text(
+            f"{timer_name.capitalize()} not found!"
+        )
         return
 
     for job in current_jobs:
         job.schedule_removal()
 
-    await update.effective_message.reply_text(f'{timer_name} removed!')
-
-
-async def edit_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Function allows to change actively running jobs. E.g. change frequency"""
-
-    timer_name = context.args[0]
-    
-    if not timer_name:
-        await update.effective_message.reply_text()
-
-    current_jobs = context.job_queue.get_jobs_by_name(
-    )
-    new_destination = context.args[0]
-
-    logger.info(f"New dest for jobs: {new_destination}")
-    for job in current_jobs:
-        job.data = new_destination
-
-    logger.info(f"Updated: {len(current_jobs)}")
-    await update.effective_message.reply_text(f"Updated: {len(current_jobs)}")
+    await update.effective_message.reply_text(f"{timer_name} removed!")
 
 
 async def list_destinations(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -141,10 +135,12 @@ async def list_destinations(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for ind, job in enumerate(current_jobs):
         # Removing chat_id from the job.name
-        clean_name = job.name.split('.')[0]
+        clean_name = job.name.split(".")[0]
 
         # Since job.date is set to destination we can print it right away!
-        reply_message += f"{ind + 1}. Name: {clean_name}. {job.data}. Next run at: {job.next_t} \n"
+        reply_message += (
+            f"{ind + 1}. Name: {clean_name}. {job.data}. Next run at: {job.next_t} \n"
+        )
 
     await update.effective_message.reply_text(reply_message)
 
@@ -156,7 +152,7 @@ def main():
     application.job_queue.scheduler.add_jobstore(
         PTBMongoDBJobStore(
             application=application,
-            host=config.get('MONGO_CONNECT'),
+            host=config.get("MONGO_CONNECT"),
         )
     )
 
@@ -165,7 +161,6 @@ def main():
     application.add_handler(CommandHandler(LIST_CMD, list_destinations))
     application.add_handler(CommandHandler(SET_CMD, set_destination))
     application.add_handler(CommandHandler(REMOVE_CMD, remove_destination))
-    application.add_handler(CommandHandler(EDIT_CMD, edit_destination))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 

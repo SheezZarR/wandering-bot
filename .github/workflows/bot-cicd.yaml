@@ -1,0 +1,21 @@
+name: Test, Update, Upload 
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-lint-and-formatting:
+    # checks for common errors, code style consistency... 
+  
+  run-tests:
+    needs: run-lint-and-formatting
+    # ... 
+  
+  update-image:
+    needs: run-tests
+    # update docker images if requirements are changed
+
+  upload-to-server:
+    needs: update-image
+    # upload to active runner and launch the containers... 
