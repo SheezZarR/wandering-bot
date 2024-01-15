@@ -1,21 +1,85 @@
 name: Test, Update, Upload 
 on:
+  # To manually run the workflow
+  workflow_dispatch:
+
+  # On each main push event
   push:
     branches:
       - main
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   run-lint-and-formatting:
     # checks for common errors, code style consistency... 
+    runs-on: linux
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Installing dependicies and running lint+formatting
+        run: |
+          make deps
+          make lint
+        
+      - name: Push any changes made...
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Automated formatting and linting..."
+          git push
   
+
   run-tests:
     needs: run-lint-and-formatting
-    # ... 
+    runs-on: linux
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Installing deps
+        run: make deps
   
-  update-image:
-    needs: run-tests
-    # update docker images if requirements are changed
+      - name: Running tests
+        run: pytest
 
-  upload-to-server:
-    needs: update-image
+
+
+          #update-image:
+    # update docker images if requirements are changed
+    #    needs: run-tests
+    #    runs-on: linux
+    #    permissions:
+    #      contents: read
+    #      packages: write
+    #
+    #    steps:
+    #      - name: Checkout repository
+    #        uses: actions/checkout@v5
+    #        
+    #      - name: Log in to the Container Registry
+    #        uses: docker/login-action@
+    #
+    #
+    #
+    #  upload-to-server:
+    #    needs: update-image
     # upload to active runner and launch the containers... 
