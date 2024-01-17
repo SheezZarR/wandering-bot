@@ -87,7 +87,7 @@ jobs:
     - name: Extract metadata (tags, labels)
       id: meta
       uses: docker/metadata-action@5
-        with: 
+      with: 
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
     - name: Build and push Docker image
