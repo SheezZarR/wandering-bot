@@ -75,7 +75,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v4
             
     - name: Log in to the Container Registry
       uses: docker/login-action@v3
@@ -86,7 +86,7 @@ jobs:
 
     - name: Extract metadata (tags, labels)
       id: meta
-      uses: docker/metadata-action@5
+      uses: docker/metadata-action@v5
       with: 
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
