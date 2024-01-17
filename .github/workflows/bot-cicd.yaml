@@ -31,8 +31,12 @@ jobs:
         run: |
           make deps
           make lint
-        
-      - name: Push any changes made...
+
+      - name: Check if changes happened...  
+        run: if [ -n "$(git status --porcelain)" ]; then export GIT_STATUS=1; else export GIT_STATUS=0; fi
+
+      - name: Push changes 
+        if: {{ env.GIT_STATUS == 1}}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
