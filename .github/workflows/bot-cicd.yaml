@@ -1,4 +1,4 @@
-name: Test, Update, Upload 
+name: Lint+Format, Test, Update, Upload 
 on:
   # To manually run the workflow
   workflow_dispatch:
@@ -15,7 +15,7 @@ env:
 jobs:
   run-lint-and-formatting:
     # checks for common errors, code style consistency... 
-    runs-on: linux
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -43,7 +43,7 @@ jobs:
 
   run-tests:
     needs: run-lint-and-formatting
-    runs-on: linux
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -66,7 +66,7 @@ jobs:
           #update-image:
     # update docker images if requirements are changed
     #    needs: run-tests
-    #    runs-on: linux
+    #    runs-on: ubuntu-latest
     #    permissions:
     #      contents: read
     #      packages: write

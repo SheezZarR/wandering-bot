@@ -1,10 +1,12 @@
 deps:
+	pip install pip-tools
 	pip-compile requirements.in
 	pip-compile dev-requirements.in
 	pip-sync requirements.txt dev-requirements.txt
 	
 lint:
 	black src
+	isort src
 	flake8 src
 
 compdock:

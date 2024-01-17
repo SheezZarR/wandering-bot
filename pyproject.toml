@@ -1,9 +1,14 @@
 [tool.pyright]
-
 root = "src"
 
 [tool.pytest.ini_options]
-
 testpaths = [
 	"tests",
 ]
+
+[tool.black]
+line-length = 90
+
+[tool.flake8]
+max-line-length = 90
+

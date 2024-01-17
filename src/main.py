@@ -1,23 +1,16 @@
-from typing import Text
-import requests
 import logging
+from typing import Text
 
+import requests
 from dotenv import dotenv_values
-from telegram import Update
-from telegram.ext import ContextTypes, Application, CommandHandler, CallbackContext
-
 from ptbcontrib.ptb_jobstores.mongodb import PTBMongoDBJobStore
+from telegram import Update
+from telegram.ext import (Application, CallbackContext, CommandHandler,
+                          ContextTypes)
 
-from replies import (
-    AVAILABLE_ACTIONS_EXPLAIN,
-    HELP_CMD,
-    LIST_CMD,
-    REMOVE_CMD,
-    SET_CMD,
-    SET_TIMER_EXPLAIN,
-    REMOVE_TIMER_EXPLAIN,
-    STARTUP_EXPLAIN,
-)
+from replies import (AVAILABLE_ACTIONS_EXPLAIN, HELP_CMD, LIST_CMD, REMOVE_CMD,
+                     REMOVE_TIMER_EXPLAIN, SET_CMD, SET_TIMER_EXPLAIN,
+                     STARTUP_EXPLAIN)
 
 logging.basicConfig(
     format="%(levelname)s- %(name)s - %(asctime)s - %(message)s", level=logging.INFO
@@ -49,12 +42,12 @@ async def wander_to(context: CallbackContext):
             job.chat_id,
             f"The {destination} is accessible. Status code: {response.status_code}",
         )
-    except requests.Timeout as tmout:
+    except requests.Timeout:
         await context.bot.send_message(
             job.chat_id, f"The resource {destination} take too long to respond!"
         )
 
-    except ConnectionError as conerr:
+    except ConnectionError:
         # DNS failure, refused etc...
         await context.bot.send_message(
             job.chat_id, f"The resource {destination} is not available!"
@@ -64,7 +57,8 @@ async def wander_to(context: CallbackContext):
         # Something is way off...
         logging.exception(f"Got unexpected exception: {unexp_except}")
         await context.bot.send_message(
-            job.chat_id, f"Unable to visit places... Got unexpected exception."
+            job.chat_id,
+            f"Unable to visit places... Got unexpected exception: {unexp_except}.",
         )
 
 
@@ -106,7 +100,7 @@ async def remove_destination(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         timer_name = context.args[0]
 
-    except IndexError as err:
+    except IndexError:
         await update.effective_message.reply_markdown(REMOVE_TIMER_EXPLAIN)
         return
 
@@ -116,9 +110,7 @@ async def remove_destination(update: Update, context: ContextTypes.DEFAULT_TYPE)
     logger.info(current_jobs)
 
     if not current_jobs:
-        await update.effective_message.reply_text(
-            f"{timer_name.capitalize()} not found!"
-        )
+        await update.effective_message.reply_text(f"{timer_name.capitalize()} not found!")
         return
 
     for job in current_jobs:
