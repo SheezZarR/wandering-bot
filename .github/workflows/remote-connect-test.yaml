@@ -8,19 +8,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Add pre-generated private key
-        run: |
-          eval `ssh-agent -s`
-          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
-
-
-
       - name: Connect and run a command 
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USERNAME }}
           port: ${{ secrets.REMOTE_PORT }}
+          key: ${{ secrets.PRIVATE_SSH_KEY }}
           script: |
             whoami
 
