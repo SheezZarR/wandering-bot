@@ -1,0 +1,23 @@
+name: Attempt Ssh connection
+on:
+  workflow_dispatch:
+
+jobs:
+  ssh-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Add pre-generated private key
+        run: |
+          ssh-add << ${{ secrets.PRIVATE_SSH_KEY }} 
+
+      - name: Connect and run a command 
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USERNAME }}
+          port: ${{ secrets.REMOTE_PORT }}
+          script: |
+            whoami
+
