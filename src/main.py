@@ -19,6 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 config = dotenv_values(".env")
 
+
 logger.info(f'Is key missing? {config.get("BOT_TOKEN") is None}')
 
 

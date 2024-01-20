@@ -1,0 +1,17 @@
+# Python specific...
+*.pyc
+__pycache__/
+**/__pycache__/
+
+# Git stuff
+.git/
+
+# Mounts and data
+mongo-data/
+
+# Project related 
+.pytest_*
+tests/
+.github/
+
+.env

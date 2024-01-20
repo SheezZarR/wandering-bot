@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r /srv/requirements.txt
 
 WORKDIR /app
 
+COPY src /app
 COPY --chmod=766 bot-run.sh /app/bot-run.sh
 
 CMD [] 
