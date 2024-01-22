@@ -98,3 +98,36 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
 
+  update-remote:
+    needs: update-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start SSH agent
+        run: |
+          eval `ssh-agent -s`
+          printf "${{ secrets.PRIVATE_SSH_KEY }}" >> ~/.ssh/telegram_bot
+          ssh-add ~/.ssh/telegram_bot
+
+      - name: RSync prod compose
+        # archive, verbose, compress   
+        run: |
+          rsync -avz -e 'ssh -p ${{ secrets.REMOTE_PORT }}' --progress ./prod.docker-compose.yaml ${{ secrets.REMOTE_USERNAME }}@${{ secrets.REMOTE_HOST }}:~/project/
+
+      - name: RSync environment variables
+        run: |
+          printf "${{ secrets.CONN_STRING }}\n" >> .env
+          printf "${{ secrets.TELEGRAM_TOKEN }}\n" >> .env
+          rsync -avz -e 'ssh -p ${{ secrets.REMOTE_PORT }}' --progress ./.env ${{ secrets.REMOTE_USERNAME }}@${{ secrets.REMOTE_HOST }}:~/project/
+
+
+      - name: Run a compose file
+        run: |
+          ssh -p ${{ secrets.REMOTE_PORT }} ${{ secrets.REMOTE_USERNAME }}@${{ secrets.REMOTE_HOST }}
+          printf "${{ secrets.GHCR_TOKEN }}" >> docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME}} --password-stdin 
+          docker compose -f ~/project/prod.docker-compose.yaml build
+          docker compose -f ~/project/prod.docker-compose.yaml up

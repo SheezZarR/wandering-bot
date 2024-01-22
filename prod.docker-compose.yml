@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  mongo:
+    image: mongo:latest 
+    container_name: mongoDB
+    volumes:
+      - ./mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=bot-db
+
+  tg-bot:
+    image: ghcr.io/sheezzarr/wandering-bot:main
+    command: /app/bot-run.sh
+    container_name: tg-bot
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      - mongo 
