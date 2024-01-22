@@ -122,7 +122,7 @@ jobs:
           eval `ssh-agent -s`
           mkdir ~/.ssh
           touch ~/.ssh/telegram_bot
-          chmod -r 600 ~/.ssh/telegram_bot
+          sudo chmod 600 ~/.ssh/telegram_bot
           echo "$SSH_KEY" >> ~/.ssh/telegram_bot
           ssh-add ~/.ssh/telegram_bot
 
