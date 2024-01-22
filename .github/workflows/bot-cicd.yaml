@@ -103,6 +103,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SSH_KEY: ${{ secrets.PRIVATE_SSH_KEY }}
+      REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+      REMOTE_USERNAME: ${{ secrets.REMOTE_USERNAME }}
+      REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+      CONN_STRING: ${{ secrets.CONN_STRING }}
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -112,24 +122,26 @@ jobs:
           eval `ssh-agent -s`
           mkdir ~/.ssh
           touch ~/.ssh/telegram_bot
-          echo ${{ secrets.PRIVATE_SSH_KEY }} >> ~/.ssh/telegram_bot
+          echo "$SSH_KEY" >> ~/.ssh/telegram_bot
           ssh-add ~/.ssh/telegram_bot
 
       - name: RSync prod compose
         # archive, verbose, compress   
         run: |
-          rsync -avz -e 'ssh -p ${{ secrets.REMOTE_PORT }}' --progress ./prod.docker-compose.yaml ${{ secrets.REMOTE_USERNAME }}@${{ secrets.REMOTE_HOST }}:~/project/
+          rsync -avz -e 'ssh -p $REMOTE_PORT' --progress ./prod.docker-compose.yaml $REMOTE_USERNAME@$REMOTE_HOST:~/project/
 
-      - name: RSync environment variables
+      - name: RSync environment variables in a file
         run: |
-          echo ${{ secrets.CONN_STRING }} >> .env
-          echo ${{ secrets.TELEGRAM_TOKEN }} >> .env
-          rsync -avz -e 'ssh -p ${{ secrets.REMOTE_PORT }}' --progress ./.env ${{ secrets.REMOTE_USERNAME }}@${{ secrets.REMOTE_HOST }}:~/project/
-
+          echo $CONN_STRING >> .env
+          echo $TELEGRAM_TOKEN >> .env
+          rsync -avz -e 'ssh -p $REMOTE_PORT' --progress ./.env $REMOTE_USERNAME@$REMOTE_HOST:~/project/
+      
+      - name: Clear environment file
+        run: 'rm .env'
 
       - name: Run a compose file
         run: |
-          ssh -p ${{ secrets.REMOTE_PORT }} ${{ secrets.REMOTE_USERNAME }}@${{ secrets.REMOTE_HOST }}
-          echo ${{ secrets.GHCR_TOKEN }} >> docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME}} --password-stdin 
+          ssh -p $REMOTE_PORT $REMOTE_USERNAME@$REMOTE_HOST
+          echo $GHCR_TOKEN >> docker login ghcr.io -u $DOCKER_USERNAME --password-stdin 
           docker compose -f ~/project/prod.docker-compose.yaml build
           docker compose -f ~/project/prod.docker-compose.yaml up
