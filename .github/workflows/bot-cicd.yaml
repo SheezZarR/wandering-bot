@@ -110,6 +110,8 @@ jobs:
       - name: Start SSH agent
         run: |
           eval `ssh-agent -s`
+          mkdir ~/.ssh
+          touch ~/.ssh/telegram_bot
           printf "${{ secrets.PRIVATE_SSH_KEY }}" >> ~/.ssh/telegram_bot
           ssh-add ~/.ssh/telegram_bot
 
