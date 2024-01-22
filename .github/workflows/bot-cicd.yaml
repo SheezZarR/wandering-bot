@@ -104,7 +104,7 @@ jobs:
 
   # JOB 4
   update-remote:
-    # needs: update-image
+    needs: update-image
     runs-on: ubuntu-latest
     permissions:
       contents: read
