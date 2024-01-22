@@ -154,4 +154,4 @@ jobs:
           ssh -p $REMOTE_PORT $REMOTE_USERNAME@$REMOTE_HOST "
           echo $GHCR_TOKEN | docker login ghcr.io -u $DOCKER_USERNAME --password-stdin &&
           docker compose -f ~/project/prod.docker-compose.yml build &&
-          docker compose -f ~/project/prod.docker-compose.yml -d up"
+          docker compose -f ~/project/prod.docker-compose.yml up -d"
