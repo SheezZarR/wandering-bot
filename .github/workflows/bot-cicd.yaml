@@ -129,7 +129,7 @@ jobs:
       - name: RSync prod compose
         # archive, verbose, compress   
         run: |
-          rsync -avz -e 'ssh -p $REMOTE_PORT' --progress ./prod.docker-compose.yaml $REMOTE_USERNAME@$REMOTE_HOST:~/project/
+          rsync -avz -e 'ssh -p "$REMOTE_PORT"' --progress ./prod.docker-compose.yaml $REMOTE_USERNAME@$REMOTE_HOST:~/project/
 
       - name: RSync environment variables in a file
         run: |
