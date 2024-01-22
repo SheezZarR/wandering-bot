@@ -13,91 +13,96 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # run-lint-and-formatting:
-  #   # checks for common errors, code style consistency... 
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #   steps:
-  #     - name: Checkout the repository
-  #       uses: actions/checkout@v4
-  #     
-  #     - name: Setup python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.12'
-  #     
-  #     - name: Installing dependicies and running lint+formatting
-  #       run: |
-  #         make deps
-  #         make lint
+  # JOB 1
+  run-lint-and-formatting:
+    # checks for common errors, code style consistency... 
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Installing dependicies and running lint+formatting
+        run: |
+          make deps
+          make lint
 
-  #     - name: Check if changes happened...  
-  #       run: if [ -n "$(git status --porcelain)" ]; then export GIT_STATUS=1; else export GIT_STATUS=0; fi
+      - name: Check if changes happened...  
+        run: if [ -n "$(git status --porcelain)" ]; then export GIT_STATUS=1; else export GIT_STATUS=0; fi
 
-  #     - name: Push changes 
-  #       if: ${{ env.GIT_STATUS == 1 }}
-  #       run: |
-  #         git config user.name github-actions
-  #         git config user.email github-actions@github.com
-  #         git add .
-  #         git commit -m "Automated formatting and linting..."
-  #         git push
-  # 
+      - name: Push changes 
+        if: ${{ env.GIT_STATUS == 1 }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Automated formatting and linting..."
+          git push
+  
+  # JOB 2
+  run-tests:
+    needs: run-lint-and-formatting
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Installing deps
+        run: make deps
+  
+      - name: Running tests
+        run: pytest
 
-  # run-tests:
-  #   needs: run-lint-and-formatting
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #   steps:
-  #     - name: Checkout the repository
-  #       uses: actions/checkout@v4
-  #     
-  #     - name: Setup python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.12'
-  #     
-  #     - name: Installing deps
-  #       run: make deps
-  # 
-  #     - name: Running tests
-  #       run: pytest
 
-  # update-image:
-  #   # update docker images if requirements are changed
-  #   needs: run-tests
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #     packages: write
+  # JOB 3
+  update-image:
+    # update docker images if requirements are changed
+    needs: run-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
-  #   steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v4
-  #           
-  #   - name: Log in to the Container Registry
-  #     uses: docker/login-action@v3
-  #     with: 
-  #       registry: ${{ env.REGISTRY }}
-  #       username: ${{ github.actor }}
-  #       password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+            
+    - name: Log in to the Container Registry
+      uses: docker/login-action@v3
+      with: 
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-  #   - name: Extract metadata (tags, labels)
-  #     id: meta
-  #     uses: docker/metadata-action@v5
-  #     with: 
-  #       images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+    - name: Extract metadata (tags, labels)
+      id: meta
+      uses: docker/metadata-action@v5
+      with: 
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-  #   - name: Build and push Docker image
-  #     uses: docker/build-push-action@v5
-  #     with:
-  #       context: .
-  #       push: true
-  #       tags: ${{ steps.meta.outputs.tags }}
-  #       labels: ${{ steps.meta.outputs.labels }}
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
 
+
+  # JOB 4
   update-remote:
     # needs: update-image
     runs-on: ubuntu-latest
@@ -116,33 +121,37 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Put ssh key 
+        run: | 
+          mkdir -p ~/.ssh
+          touch ~/.ssh/id_ed25519
+          echo "$SSH_KEY" >> ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan $REMOTE_HOST >> ~/.ssh/known_hosts
 
-      - name: Start SSH agent
+      - name: Start SSH agent and add the key
         run: |
           eval `ssh-agent -s`
-          mkdir ~/.ssh
-          touch ~/.ssh/telegram_bot
-          sudo chmod 600 ~/.ssh/telegram_bot
-          echo "$SSH_KEY" >> ~/.ssh/telegram_bot
-          ssh-add ~/.ssh/telegram_bot
+          ssh-add -vvv ~/.ssh/id_ed25519
 
       - name: RSync prod compose
         # archive, verbose, compress   
         run: |
-          rsync -avz -e 'ssh -p "$REMOTE_PORT"' --progress ./prod.docker-compose.yaml $REMOTE_USERNAME@$REMOTE_HOST:~/project/
+          rsync -avz -e "ssh -p ${REMOTE_PORT}" --progress ./prod.docker-compose.yml $REMOTE_USERNAME@$REMOTE_HOST:~/project/
 
       - name: RSync environment variables in a file
         run: |
-          echo $CONN_STRING >> .env
-          echo $TELEGRAM_TOKEN >> .env
-          rsync -avz -e 'ssh -p $REMOTE_PORT' --progress ./.env $REMOTE_USERNAME@$REMOTE_HOST:~/project/
+          echo "MONGO_CONNECT=${CONN_STRING}">> .env
+          echo "BOT_TOKEN=${TELEGRAM_TOKEN}" >> .env
+          rsync -avz -e "ssh -p ${REMOTE_PORT}" --progress ./.env $REMOTE_USERNAME@$REMOTE_HOST:~/project/
       
       - name: Clear environment file
-        run: 'rm .env'
+        run: "rm .env"
 
       - name: Run a compose file
         run: |
-          ssh -p $REMOTE_PORT $REMOTE_USERNAME@$REMOTE_HOST
-          echo $GHCR_TOKEN >> docker login ghcr.io -u $DOCKER_USERNAME --password-stdin 
-          docker compose -f ~/project/prod.docker-compose.yaml build
-          docker compose -f ~/project/prod.docker-compose.yaml up
+          ssh -p $REMOTE_PORT $REMOTE_USERNAME@$REMOTE_HOST "
+          echo $GHCR_TOKEN | docker login ghcr.io -u $DOCKER_USERNAME --password-stdin &&
+          docker compose -f ~/project/prod.docker-compose.yml build &&
+          docker compose -f ~/project/prod.docker-compose.yml up"
