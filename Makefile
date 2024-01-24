@@ -10,8 +10,8 @@ lint:
 	flake8 src
 
 compdock:
-	docker compose -f docker-compose.yml build --parallel
-	docker compose -f docker-compose.yml up
+	docker compose -f dev.docker-compose.yml build --parallel
+	docker compose -f dev.docker-compose.yml up
 
 # To start a single tg-bot instance...
 dock:

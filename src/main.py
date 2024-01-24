@@ -37,12 +37,8 @@ async def wander_to(context: CallbackContext):
     destination = job.data
 
     try:
-        response = requests.get(destination)
+        _ = requests.get(destination)
 
-        await context.bot.send_message(
-            job.chat_id,
-            f"The {destination} is accessible. Status code: {response.status_code}",
-        )
     except requests.Timeout:
         await context.bot.send_message(
             job.chat_id, f"The resource {destination} take too long to respond!"
